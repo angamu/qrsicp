@@ -43,9 +43,10 @@ function getDatosProducto(){
 
 function setProductosQR(){
     $productos=$_REQUEST['productos'];
+    $type=$_REQUEST['type'];
     $url="http://190.0.50.6:85/sicp/siteco/qr/dataproduct.php";
     $ch = curl_init();  
-    $dataArray = ['accion'=>1, 'listproducts'=>$productos];  
+    $dataArray = ['accion'=>1, 'listproducts'=>$productos, 'type'=>$type];  
     $data = http_build_query($dataArray);  
     $getUrl = $url."?".$data;
   
