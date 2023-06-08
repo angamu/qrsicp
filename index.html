@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="ZXing for JS">
+
+    <title>Ingresos a PT</title>
+
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+
+
+    <link rel="stylesheet" rel="preload" as="style" onload="this.rel='stylesheet';this.onload=null" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <link rel="stylesheet" rel="preload" as="style" onload="this.rel='stylesheet';this.onload=null" href="https://unpkg.com/normalize.css@8.0.0/normalize.css">
+    <link rel="stylesheet" rel="preload" as="style" onload="this.rel='stylesheet';this.onload=null" href="https://unpkg.com/milligram@1.3.0/dist/milligram.min.css">
+
+    <style>
+        pre {
+            border-left: 0.3rem solid #0a2362 !important;
+        }
+        .button, button, input[type='button'], input[type='reset'], input[type='submit'] {
+            background-color: #0a2362 !important;
+            border: 0.1rem solid #0a2362 !important;
+        }
+        .btn-success {
+            background-color: #122612 !important;
+            border-color: #122612 !important;
+        }
+        pre>code {
+            white-space: break-spaces !important;
+            font-size: 16px !important;
+            padding: 5px !important;
+        }
+        .sourceSelectData__item {
+            display: flex;
+        }
+        .form-control {
+            font-size: 16px !important;
+            height: 40px !important;
+        }
+        td, th {
+            border: 0.1rem solid #e1e1e1 !important;
+            font-size: 15px !important;
+        }
+        .text-lg-td {
+            max-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        td:last-child, th:last-child {
+            padding: initial !important;
+        }
+        .fa {
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+  <main class="wrapper" style="padding-top:2em">
+
+    <section class="container" id="demo-content">
+        <div>
+            <video id="video" width="350" height="250" style="border: 1px solid gray"></video>
+        </div>
+
+        <div id="sourceSelectPanel" style="display:none">
+            <label for="sourceSelect">Cambiar cámara:</label>
+            <select id="sourceSelect" style="max-width:400px">
+            </select>
+        </div>
+
+        <div>
+            <a class="button" id="startButton">Inicio</a>
+            <a class="button" id="resetButton">Resetear</a>
+        </div>
+
+        <div style="display: none">
+            <label for="decoding-style"> Decoding Style:</label>
+            <select id="decoding-style" size="1">
+            <option value="once">Decode once</option>
+            <option value="continuously">Decode continuously</option>
+            </select>
+        </div>
+
+        <div class="sourceSelectData">
+            <div class="sourceSelectData_item">
+                <label>Código:</label>
+                <pre><code id="result"></code></pre>
+                <div style="display: none;">
+                    <div id="pcode"></div>
+                    <div id="pname"></div>
+                </div>
+            </div>
+            <div class="sourceSelectData__item">
+                <input type="number" class="input-md form-control" id="pamount" placeholder="Ingrese la cantidad">
+                <button class="btn btn-success" type="submit" id="addProductToList">Agregar</button>
+            </div>
+        </div>
+
+        <div>
+            <table class="tbl-panel-informes" id="listProducts">
+                <thead>
+                    <th>C&oacute;digo</th>
+                    <th>Descripci&oacute;n</th>
+                    <th>Cantidad</th>
+                    <th>&nbsp;</th>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div>
+                <button class="btn btn-success" type="submit" id="saveProductToList">Guardar</button>
+            </div>
+        </div>
+
+    </section>
+
+
+  </main>
+
+  <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+  <script type="text/javascript">
+    /* api rest php */
+   
+    async function fetchText(codeProduct) {
+        document.getElementById('result').textContent = codeProduct
+        $.ajax({
+            type:"POST",
+            encoding:"UTF-8",
+            url: "/api",
+            data:{
+                accion:"0",
+                criterio:codeProduct
+            },
+            dataType: "json",
+            success: function(data){
+                document.getElementById('result').textContent = "** " + data.codigo + " \n** " + data.nombre + " \n** " + data.unidad;
+                $("#pcode").text(data.codigo);
+                $("#pname").text(data.nombre);
+            }
+        });
+    }
+
+    async function saveProducts(listProduct) {
+        $.ajax({
+            type:"POST",
+            url: "/api",
+            data:{
+                accion:"1",
+                productos:listProduct
+            },
+            success: function(data){
+                if(data==="success"){
+                    Swal.fire(
+                        'Registro exitoso',
+                        'La información fue guardada en Sicp',
+                        'success'
+                    )
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error en datos...',
+                        text: 'Error al registrar los productos en Sicp.'
+                    })
+                }
+            }
+        });
+        setTimeout(function(){
+            window.location.reload(true);
+        }, 2000); 
+    }
+    
+
+    function decodeOnce(codeReader, selectedDeviceId) {
+      codeReader.decodeFromInputVideoDevice(selectedDeviceId, 'video').then((result) => {
+        setTimeout(() => {
+            fetchText(result.text);
+        }, "1000");
+      }).catch((err) => {
+        document.getElementById('result').textContent = err
+      })
+    }
+    function decodeContinuously(codeReader, selectedDeviceId) {
+      codeReader.decodeFromInputVideoDeviceContinuously(selectedDeviceId, 'video', (result, err) => {
+        if (result) {
+          // properly decoded qr code
+          console.log('Found QR code!', result)
+          document.getElementById('result').textContent = result.text
+        }
+
+        if (err) {
+
+          if (err instanceof ZXing.NotFoundException) {
+            console.log('No QR code found.')
+          }
+
+          if (err instanceof ZXing.ChecksumException) {
+            console.log('A code was found, but it\'s read value was not valid.')
+          }
+
+          if (err instanceof ZXing.FormatException) {
+            console.log('A code was found, but it was in a invalid format.')
+          }
+        }
+      })
+    }
+
+    $("#addProductToList").on("click", function(){
+        if( $("#pcode").text()!='' && $("#pname").text()!='' && ($("#pamount").val()!='' || $("#pamount").val()>0) ){
+            let html="";
+            html+="<tr>";
+            html+="<td class='text-center'>"+$("#pcode").text()+"</td>";
+            html+="<td class='text-lg-td'>"+$("#pname").text()+"</td>";
+            html+="<td class='text-right'>"+$("#pamount").val()+"</td>";
+            html+="<td class='text-center'><i class='fa fa-trash-o item-delete' aria-hidden='true'></i></td>";
+            html+="</tr>";
+            $("#listProducts tbody").append(html);
+            $("#pcode").text('');
+            $("#pname").text('');
+            $("#pamount").val('');
+            $("#pamount").focus();
+            document.getElementById('result').textContent = '';
+        } 
+        else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en datos...',
+                text: 'Todos los campos son obligatorios.'
+            })
+        }
+    });
+
+    $("#listProducts tbody").on("click", ".item-delete", function(e){
+        $(this).parent().parent().remove();
+    });
+    
+
+    $("#saveProductToList").on('click', function(){            
+        if($("#listProducts tbody tr").length>0){
+            let lstproductos=new Array();            
+            $("#listProducts tbody tr").each(function(){ 
+                lstproductos.push({'codigo':$(this).find("td:eq(0)").text(), 'cantidad':$(this).find("td:eq(2)").text()});
+            });
+            saveProducts(lstproductos);
+        } 
+        else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en datos...',
+                text: 'No existen productos en lista para registrar.'
+            })
+        }       
+    });
+
+    window.addEventListener('load', function () {
+        let selectedDeviceId;
+        const codeReader = new ZXing.BrowserQRCodeReader();        
+
+        /* api rest php */
+        let codeProduct = "1540";
+        fetchText(codeProduct);
+
+        codeReader.getVideoInputDevices()
+            .then((videoInputDevices) => {
+            const sourceSelect = document.getElementById('sourceSelect')
+            selectedDeviceId = videoInputDevices[0].deviceId
+            if (videoInputDevices.length >= 1) {
+                videoInputDevices.forEach((element) => {
+                const sourceOption = document.createElement('option')
+                sourceOption.text = element.label
+                sourceOption.value = element.deviceId
+                sourceSelect.appendChild(sourceOption)
+                })
+
+                sourceSelect.onchange = () => {
+                selectedDeviceId = sourceSelect.value;
+                };
+
+                const sourceSelectPanel = document.getElementById('sourceSelectPanel')
+                sourceSelectPanel.style.display = 'block'
+            }
+
+            document.getElementById('startButton').addEventListener('click', () => {
+
+                const decodingStyle = document.getElementById('decoding-style').value;
+
+                if (decodingStyle == "once") {
+                decodeOnce(codeReader, selectedDeviceId);
+                } else {
+                decodeContinuously(codeReader, selectedDeviceId);
+                }
+
+                console.log(`Started decode from camera with id ${selectedDeviceId}`)
+            })
+
+            document.getElementById('resetButton').addEventListener('click', () => {
+                codeReader.reset()
+                document.getElementById('result').textContent = '';
+                console.log('Reset.')
+            })
+
+            })
+            .catch((err) => {
+            console.error(err)
+            })
+        })
+  </script>
+
+</body>
+
+</html>
